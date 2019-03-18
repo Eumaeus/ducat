@@ -296,46 +296,52 @@ def versionNodes(vCorp:O2Model.BoundCorpus) = {
 	for (vn <- vCorp.versionNodes) yield {
 		<div class="o2_citationBlock">	
 			{
-				for ( n <- vn.nodes) yield {
-					val checkForLong:String = {
-						n.text.size match {
-							case s if (s < 20) => {
-								n.urn.exemplarOption match {
-									case Some(eo) => " short"
-									case None => " short"
+				for ( gn <- vn.groupedNodes) yield {
+					<div class="o2_nodeGroup"> 
+						<span class="o2_nodeGroupCitation">{gn._1.passageComponent}</span>
+						{
+						for ( n <- gn._2) yield {
+							val checkForLong:String = {
+								n.text.size match {
+									case s if (s < 20) => {
+										n.urn.exemplarOption match {
+											case Some(eo) => " short"
+											case None => " short"
+										}
+									}
+									case _ => " long"
 								}
 							}
-							case _ => " long"
+							
+							val passageClass:String = {
+								O2Model.checkForRTL(n.text) match {
+									case true => s"o2_textPassage rtl ${checkForLong}"
+									case false => s"o2_textPassage ltr ${checkForLong}"
+								}	
+							}
+
+							
+							<p class={ passageClass }>
+								<span 
+									onclick={ event: Event => {
+									 	Alignment.newAlignmentClick(vCorp, n)
+									}}
+									class="o2_passage"
+									id={ s"node_${n.urn}"} >
+									{ nodeCitationSpan(n.urn).bind }
+									{ createXMLNode(n.text).bind }
+
+								</span>
+								{ alignmentNodeMarker(n.urn).bind }
+							</p>
 						}
 					}
-					
-					val passageClass:String = {
-						O2Model.checkForRTL(n.text) match {
-							case true => s"o2_textPassage rtl ${checkForLong}"
-							case false => s"o2_textPassage ltr ${checkForLong}"
-						}	
-					}
-
-					
-					<p class={ passageClass }>
-						<span 
-							onclick={ event: Event => {
-							 	Alignment.newAlignmentClick(vCorp, n)
-							}}
-							class="o2_passage"
-							id={ s"node_${n.urn}"} >
-							{ nodeCitationSpan(n.urn).bind }
-							{ createXMLNode(n.text).bind }
-
-						</span>
-						{ alignmentNodeMarker(n.urn).bind }
-					</p>
+					</div>
 				}
 			}
 		</div>
 	}	
 }
-
 
 @dom
 def alignmentNodeMarker(u:CtsUrn) = {

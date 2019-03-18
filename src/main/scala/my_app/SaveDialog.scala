@@ -110,13 +110,6 @@ object SaveDialog {
 					MainModel.saveDialogVisibility.value = "app_hidden"
 				}}
 			>Download</button>
-			<button id="testButton"
-				type="button"
-				disabled = { false }
-				onclick = { event: Event => {
-					runTest
-				}}
-			>Download</button>
 			<button id="downloadCancel"
 				type="button"
 				disabled = { false }
