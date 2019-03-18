@@ -54,9 +54,6 @@ object O2View {
 
 		{ o2messageDiv.bind }
 
-		<p id="o2_reportingCurrentUrn" class="app_reportingCurrentUrn"> { O2Model.urn.bind.toString } </p>
-
-
 		<p id="o2_urnInputP">
 		<input
 		class={ s"${O2Controller.validUrnInField.bind}" }
@@ -108,14 +105,6 @@ def linkToCurrentState = {
 }
 
 @dom
-def addTextButton = {
-	<button> {
-		"Add Text"
-	}
-	</button>
-}
-
-@dom
 def retrievePassageButton = {
 	<button
 			onclick={ event: Event => {
@@ -124,9 +113,6 @@ def retrievePassageButton = {
 				O2Controller.updateUserMessage("Retrieving passage…",1)
 				val task = Task{ O2Controller.changePassage }
 				val future = task.runAsync
-//				js.timers.setTimeout(200){
-					//Future{ O2Controller.changePassage }
-//				}
 			}
 		}
 		disabled={ (O2Controller.validUrnInField.bind == false) }
@@ -147,7 +133,6 @@ def seeAllVersionsButton(vCorp:O2Model.BoundCorpus) = {
 		disabled = { if (vCorp.versionsAvailable.bind > 1) false else true }
 		onclick = { event: Event => {
 				O2Model.displayUrn.value = O2Model.collapseToWorkUrn(vCorp.versionUrn.value)
-				//O2Model.displaynewpassage(O2Model.displayUrn.value)
 				O2Model.updateTextInCurrentCorpus(vCorp.versionUrn.value, O2Model.collapseToWorkUrn(vCorp.versionUrn.value))
 		}}
 	>All Versions</button>
@@ -161,9 +146,9 @@ def alignmentsButton(vCorp:O2Model.BoundCorpus) = {
 		>{
 			val aa:Int = vCorp.alignments.bind
 			aa match {
-				case 0 => "0 Alignments"
-				case 1 => "Clear & See 1 Alignment"
-				case _ => s"Clear & See ${aa} Alignments"
+				case 0 => "No Alignments"
+				case 1 => "Load Texts for 1 Alignment"
+				case _ => s"Load Texts for ${aa} Alignments"
 			}
 		}</button>
 }
@@ -181,21 +166,14 @@ def clearAll = {
 @dom
 def passageContainer = {
 	<div id="o2_passageContainer">
-
 		{ alignmentGuide.bind }
-		
 		<div id="o2_xmlPassageContainer">
-				
 			{ 	for ( versionCorpus <- O2Model.currentCorpus) yield {
 					{ textVersionContainer(versionCorpus).bind }	
 				}
 			}	
-
 		</div>
-		
-
 	</div>
-
 }
 
 @dom
@@ -224,15 +202,15 @@ def unsavedAlignmentList = {
 @dom
 def savedAligmentsList = {
 	<div class="savedAlignments">
-		{ if (Alignment.newAlignments.length.bind > 0) "Saved Alignments:" else " "}
-		{ for (sa <- Alignment.newAlignments) yield {
+		{ if (Alignment.currentAlignments.length.bind > 0) "Saved Alignments:" else " "}
+		{ for (sa <- Alignment.currentAlignments) yield {
 			<span class={ 
-				s" savedAlignment savedAlignment${sa._2 % 20} " 
+				s" savedAlignment savedAlignment${sa.index % 20} " 
 			}
-			onmouseenter = {  event: Event => { Alignment.loadFromNewAlignments(sa._2) } }
-			onmouseleave = {  event: Event => { Alignment.removeHighlightingFromPassages } }
-			onclick = {  event: Event => { Alignment.loadFromNewAlignments(sa._2) } }
-			>{sa._2.toString}
+			onmouseenter = {  event: Event => { Alignment.highlightMarkedNodes(sa.index) } }
+			onmouseleave = {  event: Event => { Alignment.unHighlightMarkedNodes(sa.index) } }
+			
+			>{ s"${sa.index.toString}" }
 			{ deleteAlignmentWidget(sa).bind }
 			</span>
 		}}
@@ -240,9 +218,9 @@ def savedAligmentsList = {
 }
 
 @dom 
-def deleteAlignmentWidget(sa:(CiteAlignment,Int)) = {
-	<span class={ s"deleteAlignment savedAlignment${sa._2 % 20}" }
-		onclick = {  event: Event => { Alignment.deleteUnsavedAlignment(sa) } }
+def deleteAlignmentWidget(sa:Alignment.BoundAlignment) = {
+	<span class={ s"deleteAlignment savedAlignment${sa.index % 20}" }
+		onclick = {  event: Event => { Alignment.deleteAlignment(sa) } }
 		>✖</span>
 }
 
@@ -357,22 +335,20 @@ def versionNodes(vCorp:O2Model.BoundCorpus) = {
 
 @dom
 def alignmentNodeMarker(u:CtsUrn) = {
-	for (ami <- Alignment.currentAlignmentMap) yield {
-		if (ami._1 == u) {
-			<span class={ s"alignedNodeMarker alignedNodeMarker${ami._2 % 20}" }
-				id = { s"marker_${ami._1}" }
+	for (ami <- Alignment.currentAlignments) yield {
+			if (ami.texts.contains(u)) {
+				<span class={ s"alignedNodeMarker alignedNodeMarker${ami.index % 20}" }
+				id = { s"marker_${ami.alignment}" }
 				onmouseenter={ event: Event => {
-							 	Alignment.highlightMarkedNodes(ami._2)
+							 	Alignment.highlightMarkedNodes(ami.index)
 							}}
 				onmouseleave={ event: Event => {
-							 	Alignment.unHighlightMarkedNodes(ami._2)
+							 	Alignment.unHighlightMarkedNodes(ami.index)
 							}}
 			></span>
-		} else {
-			<!-- no content -->
-		}
-	}
+			} else { <!-- empty content --> }
 
+	}
 }
 
 @dom
@@ -409,51 +385,6 @@ def versionRemoveButton(vCorp:O2Model.BoundCorpus) = {
 	<button class="o2_removeLink navButton"
 			onclick={ event: Event => O2Controller.removeThisText(vCorp) }
 	>remove</button>
-}
-
-@dom
-def versionNavPrevButton(vCorp:O2Model.BoundCorpus) = {
-	<button class="o2_prevLink navButton"
-			onclick={ event: Event => O2Controller.getPrev(vCorp) }
-			disabled= {
-				(vCorp.currentPrev.bind == None)
-			}
-	>←</button>
-}
-
-@dom
-def versionNavNextButton(vCorp:O2Model.BoundCorpus) = {
-	<button class="o2_nextLink navButton"
-			onclick={ event: Event => O2Controller.getNext(vCorp) }
-			disabled= {
-				(vCorp.currentNext.bind == None)
-			}
-	>→</button>
-}
-
-
-
-/* Global Navigation Buttons */
-@dom
-def nextButton = {
-	<button
-	class="navButton"
-	onclick={ event: Event => O2Controller.getNext }
-	disabled= {
-		(O2Model.currentNext.bind == None)
-	}
-	> → </button>
-}
-
-@dom
-def prevButton = {
-	<button
-	class="navButton"
-	onclick={ event: Event => O2Controller.getPrev }
-	disabled= {
-		(O2Model.currentPrev.bind == None)
-	}
-	> ← </button>
 }
 
 @dom

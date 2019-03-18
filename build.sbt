@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
   "edu.holycross.shot" %%% "citerelations" % "2.4.0",
   "edu.holycross.shot" %%% "cex" % "6.3.3",
   "edu.furman.classics" %%% "citealign" % "0.5.0",
+  "edu.furman.classics" %%% "citewriter" % "1.0.1",
   "com.thoughtworks.binding" %%% "dom" % "latest.version"
 )
 

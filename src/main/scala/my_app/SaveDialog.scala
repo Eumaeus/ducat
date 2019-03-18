@@ -106,8 +106,15 @@ object SaveDialog {
 				disabled = { false }
 				onclick = { event: Event => {
 					updateCexSettings
-					CexWriter.downloadCex
+					ReaderCexWriter.downloadCex
 					MainModel.saveDialogVisibility.value = "app_hidden"
+				}}
+			>Download</button>
+			<button id="testButton"
+				type="button"
+				disabled = { false }
+				onclick = { event: Event => {
+					runTest
 				}}
 			>Download</button>
 			<button id="downloadCancel"
@@ -171,7 +178,7 @@ object SaveDialog {
 	}
 
 	def doDownload = {
-		CexWriter.downloadCex
+		ReaderCexWriter.downloadCex
 	}
 
 	def validateCite2UrnEntry(thisEvent: Event):Unit = {
@@ -187,6 +194,19 @@ object SaveDialog {
 				MainController.updateUserMessage(s"${badMo} is not a valid CITE2 URN.", 2)
 			}
 		}
+	}
+
+	def runTest:Unit = {
+		var timeStart = new js.Date().getTime()
+		val wholeTimeStart = timeStart
+		/* Do test below */
+
+
+		/* report */
+		var timeEnd = new js.Date().getTime()
+		g.console.log("==========================")
+		g.console.log(s"Ran test in ${(timeEnd - timeStart)/1000} seconds.")
+
 	}
 
 }

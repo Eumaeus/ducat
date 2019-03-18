@@ -31,7 +31,6 @@ object O2Controller {
 		Alignment.clearAll
 		val timeStart = new js.Date().getTime()
 		val newUrn: CtsUrn = O2Model.urn.value
-		O2Model.updateUrnHistory(newUrn)
 		val task1 = Task{
 				//O2Model.versionsForCurrentUrn.value = O2Model.versionsForUrn(newUrn)
 				O2Model.displayPassage(newUrn)
@@ -55,7 +54,7 @@ object O2Controller {
 			case 2 => O2Model.userAlert.value = "warn"
 		}
 		js.timers.clearTimeout(O2Model.msgTimer)
-		O2Model.msgTimer = js.timers.setTimeout(6000){ O2Model.userMessageVisibility.value = "app_hidden" }
+		O2Model.msgTimer = js.timers.setTimeout(60000){ O2Model.userMessageVisibility.value = "app_hidden" }
 	}
 
 
@@ -72,26 +71,6 @@ object O2Controller {
 
 	def removeThisText(vCorp:O2Model.BoundCorpus):Unit = {
 		O2Model.removeTextFromCurrentCorpus(vCorp)
-	}
-
-	def getPrev(vCorp:O2Model.BoundCorpus):Unit = {
-		O2Model.updateTextInCurrentCorpus(vCorp.versionUrn.value, vCorp.currentPrev.value.get)
-	}
-
-	def getNext(vCorp:O2Model.BoundCorpus):Unit = {
-		O2Model.updateTextInCurrentCorpus(vCorp.versionUrn.value, vCorp.currentNext.value.get)
-	}
-
-	def getNext:Unit = {
-		if (O2Model.currentNext.value != None){
-			changeUrn(O2Model.currentNext.value.get)
-		}
-	}
-
-	def getPrev:Unit = {
-		if (O2Model.currentPrev.value != None){
-			changeUrn(O2Model.currentPrev.value.get)
-		}
 	}
 
 	def changeUrn(urnString: String): Unit = {
