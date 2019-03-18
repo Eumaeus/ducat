@@ -280,14 +280,7 @@ object Alignment {
 					// add to list
 					currentAlignments.value += newBoundAlignment
 					// add to all bound-corpora
-					val corps:Vector[O2Model.BoundCorpus] = O2Model.currentCorpus.value.toVector
-					val alignUrns:Vector[CtsUrn] = currentAlignments.value.toVector.map(_.texts).flatten
-					for (c <- O2Model.currentCorpus.value) {
-
-							val nodes:Vector[CtsUrn] = c.versionNodes.value.toVector.map(_.nodes.value.toVector).flatten.map(_.urn)
-							val sharedUrns:Vector[CtsUrn] = nodes.intersect(alignUrns)
-							c.alignments.value = sharedUrns.size
-					}
+					recalculateAlignments
 
 					clearUnsavedAlignment(ua)
 				}
@@ -315,6 +308,10 @@ object Alignment {
 		currentAlignments.value.clear
 		for (al <- tempVec) currentAlignments.value += al
 		// recalculate alignments…
+		recalculateAlignments
+	}
+
+	def recalculateAlignments:Unit = {
 		val corps:Vector[O2Model.BoundCorpus] = O2Model.currentCorpus.value.toVector
 		val alignUrns:Vector[CtsUrn] = currentAlignments.value.toVector.map(_.texts).flatten
 		for (c <- O2Model.currentCorpus.value) {
@@ -374,7 +371,6 @@ object Alignment {
 			}
 			alignments
 		}
-		g.console.log(s"""alignmentsForThisCorpus =  ${alignmentsForThisCorpus.mkString(" ")}""")
 
 		val allUrnsForAlignments:Vector[CtsUrn] = {
 			val allAlignments:Vector[BoundAlignment] = {
@@ -387,11 +383,9 @@ object Alignment {
 			}).flatten.distinct
 		}
 
-		g.console.log(s"""allUrnsForAlignments =  ${allUrnsForAlignments.mkString(" ")}""")
 
 		val groupedByVersion:Vector[(CtsUrn,Vector[CtsUrn])] = allUrnsForAlignments.groupBy(_.dropPassage).toVector
 
-		g.console.log(s"""groupedByVersion =  ${groupedByVersion.mkString(" ")}""")
 
 		val rangeUrns:Vector[CtsUrn] = {
 			groupedByVersion.map( gbv => {
@@ -420,6 +414,7 @@ object Alignment {
 				else CtsUrn(s"${fromUrn}-${toUrn.passageComponent}")
 			})
 		}
+
 
 		for (u <- rangeUrns) O2Model.displayPassage(u)
 

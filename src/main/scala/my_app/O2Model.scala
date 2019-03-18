@@ -267,6 +267,7 @@ object O2Model {
 	//	O2Model.updateCurrentListOfUrns(tempCorpus)
 		O2Model.updateCurrentCorpus(tempCorpus, newUrn)
 		O2Model.currentNumberOfCitableNodes.value = tempCorpus.size
+		Alignment.recalculateAlignments
 	}
 
 
