@@ -308,12 +308,15 @@ def versionNodes(vCorp:O2Model.BoundCorpus) = {
 							case _ => " long"
 						}
 					}
+					
 					val passageClass:String = {
 						O2Model.checkForRTL(n.text) match {
 							case true => s"o2_textPassage rtl ${checkForLong}"
 							case false => s"o2_textPassage ltr ${checkForLong}"
 						}	
 					}
+
+					
 					<p class={ passageClass }>
 						<span 
 							onclick={ event: Event => {
@@ -332,6 +335,7 @@ def versionNodes(vCorp:O2Model.BoundCorpus) = {
 		</div>
 	}	
 }
+
 
 @dom
 def alignmentNodeMarker(u:CtsUrn) = {

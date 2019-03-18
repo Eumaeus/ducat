@@ -24,7 +24,23 @@ object O2Model {
 
 	var msgTimer:scala.scalajs.js.timers.SetTimeoutHandle = null
 
-	case class VersionNodeBlock(versionUrn:Var[CtsUrn],nodes:Vars[CitableNode])
+	case class VersionNodeBlock(versionUrn:Var[CtsUrn],nodes:Vars[CitableNode])  {
+		val groupedNodes:Vars[(CtsUrn,Vars[CitableNode])] = {
+			val v1:Vector[CitableNode] = nodes.value.toVector
+			val v2 = v1.zipWithIndex.groupBy( n => n._1.urn.collapsePassageBy(1))
+			val v3 = LinkedHashMap(v2.toSeq sortBy (_._2.head._2): _*)
+			val v4 = v3 mapValues (_ map (_._1))
+			val v5:Vector[(CtsUrn, scala.collection.immutable.Vector[CitableNode])] = v4.toVector
+			val emptyGroupedNodes:Vars[(CtsUrn,Vars[CitableNode])] = Vars.empty[(CtsUrn,Vars[CitableNode])]
+			for ( gn <- v5) {
+				val emptyNodeVars:Vars[CitableNode] = Vars.empty[CitableNode]
+				for (cn <- gn._2) emptyNodeVars.value += cn
+				val newGroup:(CtsUrn,Vars[CitableNode]) = (gn._1, emptyNodeVars)
+				emptyGroupedNodes.value += newGroup
+			}
+			emptyGroupedNodes
+		}
+	}
 
 	case class BoundCorpus(versionUrn:Var[CtsUrn], versionLabel:Var[String], versionNodes:Vars[VersionNodeBlock], currentPrev:Var[Option[CtsUrn]] = Var[Option[CtsUrn]](None), currentNext:Var[Option[CtsUrn]] = Var[Option[CtsUrn]](None), versionsAvailable:Var[Int] = Var(1), alignments:Var[Int] = Var(0)  )
 
@@ -175,7 +191,30 @@ object O2Model {
 						for (n <- b._2) tempNodesVec.value += n
 						tempNodeBlockVec.value += VersionNodeBlock(tempBlockUrn, tempNodesVec)
 					}
+
+					/* Testing out new feature of VersionNodeBlock */
+					/*
+					val groupedNodesVec:Vector[(CtsUrn,Vector[CitableNode])] = {
+						val vnbVec:Vector[VersionNodeBlock] = tempNodeBlockVec.value.toVector
+						val justGroupedVecs:Vector[(CtsUrn, Vars[CitableNode])] = {
+							vnbVec.map(_.groupedNodes.value.toVector).flatten
+						}
+						val allVecs = justGroupedVecs.map(gv => {
+							val newTup:(CtsUrn,Vector[CitableNode]) = (gv._1, gv._2.value.toVector)
+							newTup
+						})
+						allVecs
+					}
+					for (gnv <- groupedNodesVec){
+						g.console.log(s"URN = ${gnv._1}")
+						for (cn <- gnv._2){
+							g.console.log(s"--- ${cn.urn}")
+						}
+					}
+					*/
+
 					val newBoundCorpus:BoundCorpus = BoundCorpus(boundVersionUrn, boundVersionLabel, tempNodeBlockVec) 
+
 
 					val sortingCorpus:Vector[BoundCorpus] = sortCorpora(O2Model.currentCorpus.value.toVector ++ Vector(newBoundCorpus))
 					val sortedCorpora:Vector[BoundCorpus] = sortCorpora(sortingCorpus) 
