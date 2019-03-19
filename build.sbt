@@ -2,7 +2,7 @@ enablePlugins(ScalaJSPlugin, BuildInfoPlugin)
 
 name := "reader"
 
-version := "0.9.3"
+version := "0.9.5"
 
 scalaVersion := "2.12.8"
 
@@ -41,7 +41,7 @@ import java.io.PrintWriter
 spa := {
 
 //  val defaultLibraryUrl = "https://raw.githubusercontent.com/cite-architecture/citedx/master/libraries/millionplus.cex"
-  val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/citealign/master/cex/minimal.cex"
+  val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/Greek120/Luke2.1-2.14_blank.cex"
   //val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/fu-spring2018.cex"
   val serverMode = false 
   val defaultLibraryDelimiter = "#"

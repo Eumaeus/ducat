@@ -1,5 +1,9 @@
-/* Save Dialog */
 
+.waiting {
+	cursor: wait;
+}
+
+/* Save Dialog */
 div#save_dialog{
   position: fixed;
   top: 50%;
@@ -648,8 +652,8 @@ a:hover {
 }
 
 .o2_message {
-	top: 70px;
-	right: 5px;
+top: 33px;
+right: 65px;
 }
 
 

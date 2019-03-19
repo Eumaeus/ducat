@@ -92,6 +92,7 @@ object O2Model {
 	}
 
 	def updateCurrentListOfUrns:Unit = {
+		MainModel.waiting.value = true
 		O2Model.currentListOfUrns.value.clear
 		val clouVec:Vector[BoundCorpus] = currentCorpus.value.toVector
 		val vnbVec:Vector[VersionNodeBlock] = clouVec.map(_.versionNodes.value.toVector).flatten
@@ -100,9 +101,11 @@ object O2Model {
 		for (n <- urnVec){
 			O2Model.currentListOfUrns.value += n
 		}	
+		MainModel.waiting.value = false 
 	}
 
 	def removeTextFromCurrentCorpus(vCorp:O2Model.BoundCorpus):Unit = {
+		MainModel.waiting.value = true
 		try {
 			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter(_ != vCorp)
@@ -119,9 +122,11 @@ object O2Model {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'removeTextFromCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false 
 	}
 
 	def removeTextFromCurrentCorpus(urn:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		try {
 			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter( vc => (urn >= vc.versionUrn.value) == false )
@@ -137,14 +142,18 @@ object O2Model {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'removeTextFromCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false
 	}
 
 	def updateTextInCurrentCorpus(oldurn:CtsUrn, newurn:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		removeTextFromCurrentCorpus(oldurn)	
 		displayPassage(newurn)	
+		MainModel.waiting.value = false 
 	}
 
 	def updateCurrentCorpus(c:Corpus, u:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		try {
 			//O2Model.currentCorpus.value.clear
 			if (O2Model.textRepo.value != None) {
@@ -212,6 +221,7 @@ object O2Model {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'updateCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false
 	}
 
 	def dropOneLevel(u:CtsUrn):CtsUrn = { 
@@ -231,7 +241,9 @@ object O2Model {
 
 
 	def displayNewPassage(urn:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		O2Model.displayPassage(urn)
+		MainModel.waiting.value = false
 	}
 
 	@dom
@@ -275,11 +287,13 @@ object O2Model {
 
 	@dom
 	def displayPassage(newUrn: CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		val tempCorpus: Corpus = O2Model.textRepo.value.get.corpus >= newUrn
 	//	O2Model.updateCurrentListOfUrns(tempCorpus)
 		O2Model.updateCurrentCorpus(tempCorpus, newUrn)
 		O2Model.currentNumberOfCitableNodes.value = tempCorpus.size
 		Alignment.recalculateAlignments
+		MainModel.waiting.value = false
 	}
 
 

@@ -1,5 +1,9 @@
 # Release notes
 
+**0.9.5**: 6x speedup loading alignments.
+
+**0.9.4**: Changed default for saving. Css.
+
 **0.9.3**: Saving and loading CEX files.
 
 **0.9.2**: UI work done for now. Grouping citable nodes according to penultimate level of citation scheme. Massive speedup on loading alignments. No longer throwing thousands of errors to the JS console.

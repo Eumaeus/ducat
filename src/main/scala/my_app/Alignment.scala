@@ -43,19 +43,51 @@ object Alignment {
 	val alignmentMgr:Var[Option[CiteAlignmentManager]] = Var[Option[CiteAlignmentManager]](None)
 
 	def loadAlignmentsFromCex:Unit = {
+		MainModel.waiting.value = true
+//var timeStart = new js.Date().getTime()
+//		g.console.log("loading alignments")
 		alignmentMgr.value match {
 			case Some(cam) => {
+				currentAlignments.unwatch()
 				val alignmentUrns:Vector[Cite2Urn] = cam.alignments.map(_.urn)
 				for ( (a,i) <- alignmentUrns.zipWithIndex) {
-					val texts:Vector[CtsUrn] = cam.passagesForAlignment(a)
+					//val texts:Vector[CtsUrn] = cam.passagesForAlignment(a)
+					/*
+					val amnt:Vector[CiteAlignment] = cam.getAlignments(a)
+					val texts:Vector[CtsUrn] = amnt.map(_.passages).flatten
+					*/
+					val texts:Vector[CtsUrn] = {
+			RelationsModel.citeRelations.value match {
+				case Some(rs) => {
+					val alignmentObjects:Vector[CiteObject] = cam.alignments(a)		
+					val texts:Vector[CtsUrn] = {
+						alignmentObjects.map( ao => {
+							val passages:Vector[CtsUrn] = {
+								val passageSet:Set[CtsUrn] = rs.urn1Match(a).relations.map(_.urn2.asInstanceOf[CtsUrn])
+								val passageVec:Vector[CtsUrn] = passageSet.toVector
+								passageVec
+							}
+							passages
+						}).flatten
+					}
+					texts
+				}
+				case None => Vector[CtsUrn]()
+			}
+					}
+
 					val index:Int = i
 					val ba:BoundAlignment = BoundAlignment(a, texts, i)
 					currentAlignments.value += ba
 				}
-
+				currentAlignments.watch()
 			}
 			case None => // do nothing
 		}
+//var timeEnd = new js.Date().getTime()
+//g.console.log(s"${(timeEnd - timeStart) / 1000} seconds.")
+//		g.console.log("done loading alignments")
+		MainModel.waiting.value = false	
 	}
 
 

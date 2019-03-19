@@ -126,9 +126,9 @@ object SaveDialog {
 		<div id="corpusOptionsBlock" class="saveDialogGroup">
 			<label for="">Corpus Options:</label>
 			<select id="corpusOptions">
+				<option value="all">All passages of all texts</option>
 				<option value="shown">Displayed passages only</option>
 				<option value="shownAll">All passages for displayed texts</option>
-				<option value="all">All passages of all texts</option>
 			</select>
 		</div>
 	}

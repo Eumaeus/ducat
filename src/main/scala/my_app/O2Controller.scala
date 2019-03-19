@@ -53,7 +53,7 @@ object O2Controller {
 			case 2 => O2Model.userAlert.value = "warn"
 		}
 		js.timers.clearTimeout(O2Model.msgTimer)
-		O2Model.msgTimer = js.timers.setTimeout(60000){ O2Model.userMessageVisibility.value = "app_hidden" }
+		O2Model.msgTimer = js.timers.setTimeout(6000){ O2Model.userMessageVisibility.value = "app_hidden" }
 	}
 
 
