@@ -230,8 +230,8 @@ def saveAlignmentButton = {
 		onclick = {  event: Event => { Alignment.saveTempAlignment } }
 	><i class={
 		Alignment.unsavedAlignmentMap.length.bind match {
-			case 0 => "far fa-sign-in-alt app_hidden"
-			case _ => "far fa-sign-in-alt"
+			case 0 => "fas fa-sign-in-alt app_hidden"
+			case _ => "fas fa-sign-in-alt"
 		}
 	}></i></span>
 }
