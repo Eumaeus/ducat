@@ -2,7 +2,7 @@ enablePlugins(ScalaJSPlugin, BuildInfoPlugin)
 
 name := "reader"
 
-version := "0.9.2"
+version := "0.9.3"
 
 scalaVersion := "2.12.8"
 
@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "org.scala-js" %% "scalajs-stubs" % scalaJSVersion % "provided",
   "org.scala-js" %%% "scalajs-dom" % "0.9.6",
   "io.monix" %%% "monix" % "2.3.0",
-  "edu.holycross.shot.cite" %%% "xcite" % "3.7.0",
+  "edu.holycross.shot.cite" %%% "xcite" % "4.0.2",
   "edu.holycross.shot" %%% "ohco2" % "10.12.3",
   "edu.holycross.shot" %%% "scm" % "6.2.0",
   "edu.holycross.shot" %%% "citeobj" % "7.3.2",

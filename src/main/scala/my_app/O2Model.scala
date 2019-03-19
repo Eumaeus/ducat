@@ -104,7 +104,6 @@ object O2Model {
 
 	def removeTextFromCurrentCorpus(vCorp:O2Model.BoundCorpus):Unit = {
 		try {
-			Alignment.clearAll
 			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter(_ != vCorp)
 			}
@@ -124,7 +123,6 @@ object O2Model {
 
 	def removeTextFromCurrentCorpus(urn:CtsUrn):Unit = {
 		try {
-			Alignment.clearAll
 			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter( vc => (urn >= vc.versionUrn.value) == false )
 			}
@@ -142,7 +140,6 @@ object O2Model {
 	}
 
 	def updateTextInCurrentCorpus(oldurn:CtsUrn, newurn:CtsUrn):Unit = {
-		Alignment.clearAll
 		removeTextFromCurrentCorpus(oldurn)	
 		displayPassage(newurn)	
 	}
@@ -192,29 +189,7 @@ object O2Model {
 						tempNodeBlockVec.value += VersionNodeBlock(tempBlockUrn, tempNodesVec)
 					}
 
-					/* Testing out new feature of VersionNodeBlock */
-					/*
-					val groupedNodesVec:Vector[(CtsUrn,Vector[CitableNode])] = {
-						val vnbVec:Vector[VersionNodeBlock] = tempNodeBlockVec.value.toVector
-						val justGroupedVecs:Vector[(CtsUrn, Vars[CitableNode])] = {
-							vnbVec.map(_.groupedNodes.value.toVector).flatten
-						}
-						val allVecs = justGroupedVecs.map(gv => {
-							val newTup:(CtsUrn,Vector[CitableNode]) = (gv._1, gv._2.value.toVector)
-							newTup
-						})
-						allVecs
-					}
-					for (gnv <- groupedNodesVec){
-						g.console.log(s"URN = ${gnv._1}")
-						for (cn <- gnv._2){
-							g.console.log(s"--- ${cn.urn}")
-						}
-					}
-					*/
-
 					val newBoundCorpus:BoundCorpus = BoundCorpus(boundVersionUrn, boundVersionLabel, tempNodeBlockVec) 
-
 
 					val sortingCorpus:Vector[BoundCorpus] = sortCorpora(O2Model.currentCorpus.value.toVector ++ Vector(newBoundCorpus))
 					val sortedCorpora:Vector[BoundCorpus] = sortCorpora(sortingCorpus) 
@@ -256,7 +231,6 @@ object O2Model {
 
 
 	def displayNewPassage(urn:CtsUrn):Unit = {
-		Alignment.clearAll
 		O2Model.displayPassage(urn)
 	}
 
@@ -266,7 +240,6 @@ object O2Model {
 		//O2Model.versionsForCurrentUrn.value = 0
 		O2Model.currentListOfUrns.value.clear
 		O2Model.currentCorpus.value.clear
-		Alignment.clearAll
 	}
 
 	def passageLevel(u:CtsUrn):Int = {

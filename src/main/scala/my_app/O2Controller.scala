@@ -28,7 +28,6 @@ object O2Controller {
 
 	/* A lot of work gets done here */
 	def changePassage: Unit = {
-		Alignment.clearAll
 		val timeStart = new js.Date().getTime()
 		val newUrn: CtsUrn = O2Model.urn.value
 		val task1 = Task{

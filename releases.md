@@ -1,5 +1,7 @@
 # Release notes
 
+**0.9.3**: Saving and loading CEX files.
+
 **0.9.2**: UI work done for now. Grouping citable nodes according to penultimate level of citation scheme. Massive speedup on loading alignments. No longer throwing thousands of errors to the JS console.
 
 **0.9.1**: Loading CEX, clicking to make alignments, navigating and seeing alignments, loading other texts based on one corpus' alignments all working.

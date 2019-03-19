@@ -238,8 +238,7 @@ object MainController {
 			Alignment.clearAll
 			Alignment.alignmentMgr.value = Some(CiteAlignmentManager(repo))	
 			if (Alignment.alignmentMgr.value.get.isValid == false) Alignment.alignmentMgr.value = None
-
-			//checkDefaultTab
+			Alignment.loadAlignmentsFromCex
 
 			MainController.updateUserMessage(loadMessage,0)
 

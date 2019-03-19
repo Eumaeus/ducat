@@ -42,6 +42,23 @@ object Alignment {
 
 	val alignmentMgr:Var[Option[CiteAlignmentManager]] = Var[Option[CiteAlignmentManager]](None)
 
+	def loadAlignmentsFromCex:Unit = {
+		alignmentMgr.value match {
+			case Some(cam) => {
+				val alignmentUrns:Vector[Cite2Urn] = cam.alignments.map(_.urn)
+				for ( (a,i) <- alignmentUrns.zipWithIndex) {
+					val texts:Vector[CtsUrn] = cam.passagesForAlignment(a)
+					val index:Int = i
+					val ba:BoundAlignment = BoundAlignment(a, texts, i)
+					currentAlignments.value += ba
+				}
+
+			}
+			case None => // do nothing
+		}
+	}
+
+
 	// shorten long passages for display
 	def ellipsisText(s:String):String = {
 		s.size match {
@@ -54,7 +71,7 @@ object Alignment {
 
 	// build out
 	def clearAll:Unit = {
-		g.console.log("clear all")
+		currentAlignments.value.clear
 	}
 
 	// add alignments for the texts displayed to the bound corpus
@@ -356,12 +373,10 @@ object Alignment {
 	def loadAlignments(vCorp:O2Model.BoundCorpus):Unit = {
 		var timeStart = new js.Date().getTime()
 		val wholeTimeStart = timeStart
-
 		// Turn on alignment mode (affects navigation)
 		O2Model.clearPassage
 		//Stash URN
 		val u:CtsUrn = vCorp.versionUrn.value
-		g.console.log(s"u = ${u}")
 		val alignmentsForThisCorpus:Vector[Int] = {
 			val alignedNodes:Vector[CtsUrn] = vCorp.versionNodes.value.toVector.map(_.nodes.value.toVector).flatten.map(_.urn)
 			val alignments:Vector[Int] = {
@@ -371,7 +386,6 @@ object Alignment {
 			}
 			alignments
 		}
-
 		val allUrnsForAlignments:Vector[CtsUrn] = {
 			val allAlignments:Vector[BoundAlignment] = {
 				currentAlignments.value.toVector.filter(ca => {
@@ -420,9 +434,102 @@ object Alignment {
 
 		/* report */
 		var timeEnd = new js.Date().getTime()
-		g.console.log("==========================")
-		g.console.log(s"Ran test in ${(timeEnd - timeStart)/1000} seconds.")
 	}
 
+// case class BoundAlignment(alignment:Cite2Urn, texts:Vector[CtsUrn], index:Int)
+def toCEX:String = {
+		if (currentAlignments.value.size > 0) {
+			// Assign Urns
+			val boundAs:Vector[(CiteAlignment,Int)] = currentAlignments.value.toVector.map( ca => {
+				val d = new js.Date()
+				val label:String = s"DucatAlignment ${ca.index}. ${d.getDay()}/${d.getMonth()}/${d.getFullYear()}. By ${SaveDialog.defaultEditorName.value}."
+				val a:CiteAlignment = CiteAlignment(ca.alignment, label, ca.texts.toVector)
+				(a, ca.index)
+			})
+			val dlVector:Vector[(CiteAlignment,Int)] = boundAs.map( a => {
+				val d = new js.Date()
+				val urn:Cite2Urn = {
+					val urnBase:String = SaveDialog.newAlignmentCollectionUrn.value.toString
+					val yearMonth:String = s"${d.getFullYear()}${d.getMonth()}"
+					val hours:String = s"${d.getHours()}_${d.getMinutes()}_${d.getSeconds()}_${d.getMilliseconds()}"
+					val index:Int = a._2
+					val urnString:String = s"${urnBase}${yearMonth}${hours}_${index}"
+					Cite2Urn(urnString)
+				}
+				val newAlignment:CiteAlignment = CiteAlignment(urn,a._1.label,a._1.passages)
+				(newAlignment, a._2)
+			})
+
+			// Collection Def
+			val aCollDef:String = {
+				val header1:String = "#!citecollections"
+				val header2:String = "URN#Description#Labelling property#Ordering property#License"
+				val urn:String = SaveDialog.newAlignmentCollectionUrn.value.toString
+				val labelProp:String = SaveDialog.newAlignmentCollectionUrn.value.addProperty("label").toString
+				val desc:String = "Citation Alignments"
+				val orderProp:String  = ""
+				val lic:String = "CC-BY 3.0"
+
+				val header:Vector[String] = Vector(header1, header2)
+				val bodyLine:Vector[String] = Vector(Vector(urn, desc, labelProp, orderProp, lic).mkString("#"))
+				(header ++ bodyLine).mkString("\n")
+			}
+			// Property Def
+			val aPropsDef:String = {
+				val header1:String = "#!citeproperties"
+				val header2:String = "Property#Label#Type#Authority list"
+				val props:Vector[(String,String)] = {
+					Vector(("urn","#Alignment Record#Cite2Urn#"),
+					("label","#Label#String#"),
+					("description","#Description#String#"),
+					("editor","#Editor#String#"),
+					("date","#Date#String#") )
+				}
+				val propLines:Vector[String] = props.map(p => {
+					val urn:String = SaveDialog.newAlignmentCollectionUrn.value.addProperty(p._1).toString
+					s"${urn}${p._2}"
+				})
+				val header:Vector[String] = Vector(header1, header2)
+				(header ++ propLines).mkString("\n")
+			}
+
+			// Collection Data
+			val aCollData:String = {
+				val header1:String = "#!citedata"
+				val header2:String = "urn#label#description#editor#date"
+				val header:Vector[String] = Vector(header1, header2)
+				val alignStrings:Vector[String] = {
+					dlVector.map( a => {
+						val d = new js.Date()
+						val label:String = s"Alignment ${a._2}"
+						val desc:String = s"Textual Alignment created with the Ducat tool on: ${new js.Date()}."
+						val editor:String = SaveDialog.defaultEditorName.value
+						val date:String = d.toUTCString
+						val strVec:Vector[String] = Vector(a._1.urn.toString,label,desc,editor,date)
+						strVec.mkString("#")
+					})
+				}
+				(header ++ alignStrings).mkString("\n")
+			}
+			// Relations
+			val aRelations:String = {
+				val header:String = "#!relations"
+				val aRelations:String = dlVector.map( a => {
+					val s:Cite2Urn = a._1.urn
+					val v:Cite2Urn = relationUrn
+					val rels:String = a._1.passages.map( p => {
+						s"${s}#${v}#${p}"
+					}).mkString("\n")
+					rels
+				}).mkString("\n")
+				header + "\n" + aRelations
+			}
+
+			val cexVec:String = Vector(aCollDef,aPropsDef,aCollData,aRelations).mkString("\n\n")
+			cexVec
+		} else {
+			""
+		}
+	}
 	
 }

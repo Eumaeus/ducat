@@ -138,7 +138,7 @@ object SaveDialog {
 		<div id="alignmentOptionsBlock" class="saveDialogGroup">
 			<label for="">Alignment Options:</label>
 			<select id="alignmentOptions">
-				<option value="shown">New alignments only</option>
+				<option value="shown">Alignments only</option>
 				<!--  <option value="all">All Objects &amp; Relations</option> -->
 			</select>
 		</div>
@@ -187,19 +187,6 @@ object SaveDialog {
 				MainController.updateUserMessage(s"${badMo} is not a valid CITE2 URN.", 2)
 			}
 		}
-	}
-
-	def runTest:Unit = {
-		var timeStart = new js.Date().getTime()
-		val wholeTimeStart = timeStart
-		/* Do test below */
-
-
-		/* report */
-		var timeEnd = new js.Date().getTime()
-		g.console.log("==========================")
-		g.console.log(s"Ran test in ${(timeEnd - timeStart)/1000} seconds.")
-
 	}
 
 }
