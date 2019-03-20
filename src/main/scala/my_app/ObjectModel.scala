@@ -136,7 +136,7 @@ object ObjectModel {
 		val header:String = citePropertiesHeader
 		val propDefs:Vector[CitePropertyDef] = cd.propertyDefs
 		val propVec:Vector[String] = propDefs.map(pd => {
-			s"""${pd.urn}#${pd.label}#${pd.propertyType.toString.replaceAll("Type","")}#${pd.vocabularyList.mkString(",")}"""
+			s"""${pd.urn}#${pd.label}#${pd.propertyType.cex}#${pd.vocabularyList.mkString(",")}"""
 		})
 		val cexBlock:String = (Vector(header) ++ propVec).mkString("\n")
 		cexBlock

@@ -12,7 +12,7 @@ reader-1.1.0.html?urn=urn:cts:greekLit:tlg0016.tlg001.grc:1.2&urn=urn:cts:latinL
 
 \* [Ugarit iAligner](http://ugarit.ialigner.com) is a brilliant user interface for translation alignment, created by Maryam Foradi, Chiara Palladino, and Tariq Yousef. This application, DUCAT, was inspired by the philological model behind [Ugarit](http://ugarit.ialigner.com) and the potential for scholarship and pedagogy it represents. Hence, "Daughter of Ugarit". A [*ducat*](https://en.wikipedia.org/wiki/Ducat) was once the gold “coin of the realm” allowing commerce among nations.
 
-## Current version: 0.9.0
+## Current version: 1.0.0
 
 Active development. See [release notes](releases.md).
 

@@ -26,13 +26,10 @@ object Alignment {
 	// Alignment relation urn
 	val relationUrn:Cite2Urn = Cite2Urn("urn:cite2:cite:verbs.v1:aligns")
 
-	// Alignments already in the CEX
-	val currentAlignments:Vars[(Cite2Urn,Int)] = Vars.empty
-	// Map of CtsUrn to Int for current corpus
-	val currentAlignmentMap:Vars[(CtsUrn,Int)] = Vars.empty
+	case class BoundAlignment(alignment:Cite2Urn, texts:Vector[CtsUrn], index:Int)	
 
-	// Alignments created by clicking and hitting the disk icon
-	val newAlignments:Vars[(CiteAlignment,Int)] = Vars.empty
+	// Alignments already in the CEX
+	val currentAlignments:Vars[BoundAlignment] = Vars.empty
 
 	// for saving unsaved alignments
 	val unsavedAlignmentUrn:Cite2Urn = Cite2Urn("urn:cite2:temp:alignment.v:temp")
@@ -43,42 +40,70 @@ object Alignment {
 	// Mapping by text-version for display
 	val unsavedAlignmentMap:Vars[((CtsUrn,Vars[(CtsUrn,String)]),Int)] = Vars.empty
 
-
-
 	val alignmentMgr:Var[Option[CiteAlignmentManager]] = Var[Option[CiteAlignmentManager]](None)
 
-
-	def mergeAllAlignments(s:String):Unit = {
+	def loadAlignmentsFromCex:Unit = {
+		MainModel.waiting.value = true
+//var timeStart = new js.Date().getTime()
+//		g.console.log("loading alignments")
 		alignmentMgr.value match {
-			case Some(am) => {
-				g.console.log("mergeAllAlignments " + s)	
-				val tempNewAlignments:Vector[CiteAlignment] = newAlignments.value.toVector.map(_._1)
-				val tempCurrentAlignments:Vector[(Cite2Urn,Int)] = currentAlignments.value.toVector
-				val mappedCurrent:Vector[CiteAlignment] = tempCurrentAlignments.map( tca => {
-						am.getAlignments(tca._1)
-				}).flatten
-				val newCurrent:Vector[(Cite2Urn,Int)] = (tempNewAlignments ++ mappedCurrent).map(_.urn).zipWithIndex			
-				val newNew:Vector[(CiteAlignment,Int)] = (tempNewAlignments ++ mappedCurrent).zipWithIndex			
-				clearAll
-				for (a <- newCurrent) {
-					currentAlignments.value += a
-				}
-				for (a <- newNew) {
-					newAlignments.value += a
-				}
-				for ( (a,i) <- newCurrent ){
-						val urns:Vector[CtsUrn] = am.passagesForAlignment(a)
-						for ( u <- urns) {
-							val tempMap:(CtsUrn,Int) = (u, i)	
-							currentAlignmentMap.value += tempMap
-						}
+			case Some(cam) => {
+				currentAlignments.unwatch()
+				val alignmentUrns:Vector[Cite2Urn] = cam.alignments.map(_.urn)
+				for ( (a,i) <- alignmentUrns.zipWithIndex) {
+					//val texts:Vector[CtsUrn] = cam.passagesForAlignment(a)
+					/*
+					val amnt:Vector[CiteAlignment] = cam.getAlignments(a)
+					val texts:Vector[CtsUrn] = amnt.map(_.passages).flatten
+					*/
+					val texts:Vector[CtsUrn] = {
+			RelationsModel.citeRelations.value match {
+				case Some(rs) => {
+					val alignmentObjects:Vector[CiteObject] = cam.alignments(a)		
+					val texts:Vector[CtsUrn] = {
+						alignmentObjects.map( ao => {
+							val passages:Vector[CtsUrn] = {
+								val passageSet:Set[CtsUrn] = rs.urn1Match(a).relations.map(_.urn2.asInstanceOf[CtsUrn])
+								val passageVec:Vector[CtsUrn] = passageSet.toVector
+								passageVec
+							}
+							passages
+						}).flatten
 					}
-				//g.console.log(s"${newCurrent.mkString("\n")}")	
-
+					texts
+				}
+				case None => Vector[CtsUrn]()
 			}
-			case None => 
-		}	
+					}
 
+					val index:Int = i
+					val ba:BoundAlignment = BoundAlignment(a, texts, i)
+					currentAlignments.value += ba
+				}
+				currentAlignments.watch()
+			}
+			case None => // do nothing
+		}
+//var timeEnd = new js.Date().getTime()
+//g.console.log(s"${(timeEnd - timeStart) / 1000} seconds.")
+//		g.console.log("done loading alignments")
+		MainModel.waiting.value = false	
+	}
+
+
+	// shorten long passages for display
+	def ellipsisText(s:String):String = {
+		s.size match {
+			case n if (n > 15) => {
+				s"${s.take(7)}…${s.takeRight(7)}"
+			}
+			case _ => s
+		}
+	}
+
+	// build out
+	def clearAll:Unit = {
+		currentAlignments.value.clear
 	}
 
 	// add alignments for the texts displayed to the bound corpus
@@ -90,45 +115,6 @@ object Alignment {
 				vCorp.alignments.value = av.size
 			}
 			case None => 
-		}
-	}
-
-	// display aligments (from the CEX) as markers on the on-screen text
-	def loadAlignments(vCorp:O2Model.BoundCorpus):Unit = {
-		alignmentMgr.value match {
-			case Some(am) => {
-				// Turn on alignment mode (affects navigation)
-				O2Model.alignMode.value = true
-				O2Model.clearPassage
-				//Stash URN
-				val u:CtsUrn = vCorp.versionUrn.value
-				val als:Vector[Cite2Urn] = am.alignmentsForText(u).map(_.urn).toVector
-				for (a <- als.zipWithIndex) currentAlignments.value += a
-				if (als.size > 0){
-					val c:Corpus = am.corpusForAlignments(als, false)
-					for (vu <- c.citedWorks){ 
-						// make a range from the first and last
-						val u:CtsUrn = {
-							val uus:Vector[CtsUrn] = (c ~~ vu).urns
-							val u1:CtsUrn = uus.head
-							val u2:CtsUrn = uus.last
-							val u2psg:String = u2.passageComponent
-							CtsUrn(s"${u1}-${u2psg}")
-						}
-						O2Model.displayPassage(u) 
-					}
-					// This also takes forever, but the visual display is done at this point
-					for ( (a,i) <- als.zipWithIndex ){
-						val urns:Vector[CtsUrn] = am.passagesForAlignment(a)
-						for ( u <- urns) {
-							val tempMap:(CtsUrn,Int) = (u, i)	
-							currentAlignmentMap.value += tempMap
-						}
-					}
-					mergeAllAlignments("Alignments.loadAlignments")
-				}				
-			}
-			case None => {}
 		}
 	}
 
@@ -145,7 +131,7 @@ object Alignment {
 		if (classList.contains("newAlignment")) {
 			val newCL:String = classList.replaceAll(" newAlignment[0-9]+","").replaceAll("newAlignment","") .replaceAll("  "," ")
 			el.setAttribute("class",newCL)
-			Alignment.removeNodeFromAlignment(node)
+			Alignment.removeNodeFromUnsavedAlignment(node)
 		} else {
 			val newCL:String = classList + s" newAlignment newAlignment${textIndex}"
 			el.setAttribute("class",newCL)
@@ -155,7 +141,7 @@ object Alignment {
 
 	// remove a citable-node from the current alignment-in-progress
 	def removeNodeFromAlignment(node:CitableNode):Unit = {
-		removeNodeFromTempAlignment(node:CitableNode)
+		removeNodeFromUnsavedAlignment(node:CitableNode)
 	}
 
 	// continues the work of a click by adding the urn to the in-progress alignment,
@@ -163,27 +149,17 @@ object Alignment {
 	def addNodeToAlignment(node:CitableNode):Unit = {
 		unsavedAlignment.value match {
 			case Some(ua) => {
-				addNodeToTempAlignment(node)	
+				addNodeToUnsavedAlignment(node)	
 			}
 			case None => {
-				createTempAlignment(node)
-				addNodeToTempAlignment(node)	
+				createUnsavedAlignment(node)
+				addNodeToUnsavedAlignment(node)	
 			}
-		}
-	}
-
-	// shorten long passages for display
-	def ellipsisText(s:String):String = {
-		s.size match {
-			case n if (n > 15) => {
-				s"${s.take(7)}…${s.takeRight(7)}"
-			}
-			case _ => s
 		}
 	}
 
 	// remove a citable-node from the current alignment-in-progress
-	def removeNodeFromTempAlignment(n:CitableNode):Unit = {
+	def removeNodeFromUnsavedAlignment(n:CitableNode):Unit = {
 		// do map first for quick display
 		unsavedAlignmentMap.value.size match {
 			case n if (n < 1) => {
@@ -236,9 +212,8 @@ object Alignment {
 			}
 		}
 	}
-
 	// Add a node to the alignment-in-progress
- 	def addNodeToTempAlignment(n:CitableNode):Unit = {
+ 	def addNodeToUnsavedAlignment(n:CitableNode):Unit = {
 		// First add to unsavedAlignmentMap for quick display
 		val usaVec:Vector[((CtsUrn,Vector[(CtsUrn,String)]),Int)] = unsavedAlignmentMap.value.toVector.map(vv => ((vv._1._1, vv._1._2.value.toVector),vv._2))
 		val usaSimpleMap:Vector[(CtsUrn, Vector[(CtsUrn,String)])] = usaVec.map(_._1)
@@ -281,7 +256,13 @@ object Alignment {
 				O2Controller.updateUserMessage(errorStr,2)
 			}
 		}
+	}
 
+	def createUnsavedAlignment(n:CitableNode):Unit = {
+		val label:String = unsavedAlignmentLabel.value
+		val urn:Cite2Urn = unsavedAlignmentUrn
+		val ca:CiteAlignment = CiteAlignment(urn, label, Vector(n.urn))
+		unsavedAlignment.value = Some(ca)
 	}
 
 	def sortUrns(vu:Vector[(CtsUrn,String)]):Vector[(CtsUrn,String)] = {
@@ -313,103 +294,6 @@ object Alignment {
 		v5
 	}
 
-	def createTempAlignment(n:CitableNode):Unit = {
-		val label:String = unsavedAlignmentLabel.value
-		val urn:Cite2Urn = unsavedAlignmentUrn
-		val ca:CiteAlignment = CiteAlignment(urn, label, Vector(n.urn))
-		unsavedAlignment.value = Some(ca)
-	}
-
-	def saveTempAlignment:Unit = {
-	//	val newAlignments:Vars[(CiteAlignment,Int)] = Vars.empty
-		try {
-			unsavedAlignment.value match {
-				case Some(ua) => {
-					val newIndex:Int = newAlignments.value.length
-					val newTuple:(CiteAlignment,Int) = (ua, newIndex)
-					newAlignments.value += newTuple
-					// Add to currentAlignmentMap
-							
-					clearUnsavedAlignment(ua)
-				}
-				case None => throw new Exception("Did Alignment.saveTempAlighment with no unsavedAlignment!")
-			}
-		} catch {
-			case e:Exception => {
-				val errorStr:String = s"Failed to save temporary alignment: ${e}."
-				O2Controller.updateUserMessage(errorStr,2)
-			}
-		}
-	}
-
-	def removeHighlightingFromPassages:Unit = {
-		try {
-			val bc:Vector[O2Model.BoundCorpus] = O2Model.currentCorpus.value.toVector
-			val urnVec:Vector[CtsUrn] = bc.map(b => {
-				val vn:Vector[O2Model.VersionNodeBlock] = b.versionNodes.value.toVector
-				val uv:Vector[CtsUrn] = vn.map( v => {
-					v.nodes.value.toVector
-				}).flatten.map(_.urn)
-				uv
-			}).flatten
-			for (p <- urnVec) {
-				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
-				val classList:String = el.getAttribute("class")	
-				val newClass:String = classList.replaceAll("newAlignment[0-9]+","").replaceAll("newAlignment","")
-				el.setAttribute("class",newClass)
-			}
-			// But if there are unsaved ones… restore them 
-			restoreUnsavedAlignmentHilighting
-
-		} catch {
-			case e:Exception => {
-				val errorStr:String = s"Failed to clear highlighting: ${e}."
-				O2Controller.updateUserMessage(errorStr,2)
-			}
-		}
-	}
-
-	def restoreUnsavedAlignmentHilighting:Unit = {
-		val usas:Vector[(CtsUrn, Int)] = {
-				val corpVec:Vector[(CtsUrn,Int)] = {
-					unsavedAlignmentMap.value.toVector.map( a => {
-						val i:Int = a._2
-						val v:Vector[(CtsUrn,String)] = a._1._2.value.toVector
-						val vi:Vector[(CtsUrn,Int)] = v.map( u => {
-							(u._1,i)	
-						})
-						vi
-					}).flatten
-				}
-				corpVec
-			}
-			for (p <- usas) {
-				val el = js.Dynamic.global.document.getElementById(s"node_${p._1}").asInstanceOf[HTMLSpanElement]
-				val classList:String = el.getAttribute("class")	
-				val newClass:String = s"o2_passage newAlignment newAlignment${p._2}"
-				el.setAttribute("class",newClass)
-			}
-	}
-
-	def highlightMarkedNodes(i:Int) = {
-		val urns:Vector[CtsUrn] = currentAlignmentMap.value.toVector.filter(_._2 == i).map(_._1)
-		for (p <- urns) {
-				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
-				val classList:String = el.getAttribute("class")	
-				val newClass:String = s"${classList} tokenForMarker${i % 20}"
-				el.setAttribute("class",newClass)
-			}
-	}
-
-	def unHighlightMarkedNodes(i:Int) = {
-		val urns:Vector[CtsUrn] = currentAlignmentMap.value.toVector.filter(_._2 == i).map(_._1)
-		for (p <- urns) {
-				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
-				val classList:String = el.getAttribute("class").replaceAll("tokenForMarker[0-9]+"," ").replaceAll(" +"," ")	
-				el.setAttribute("class",classList)
-			}		
-	}
-
 	def clearUnsavedAlignment(ua:CiteAlignment):Unit = {
 		try {
 			val passages:Vector[CtsUrn] = ua.passages
@@ -429,77 +313,184 @@ object Alignment {
 		}
 	}
 
-	def clearAll = {
-		Alignment.unsavedAlignmentMap.value.clear
-		Alignment.currentAlignmentMap.value.clear
-		Alignment.newAlignments.value.clear
-		Alignment.currentAlignments.value.clear
-		Alignment.newAlignments.value.clear
-	}
-
-	def deleteUnsavedAlignment(sa:(CiteAlignment, Int)):Unit = {
-	//	val newAlignments:Vars[(CiteAlignment,Int)] = Vars.empty
-		// Remove any highlighting
-		removeHighlightingFromPassages
-		val nas:Vector[(CiteAlignment,Int)] = newAlignments.value.toVector
-		val newVec:Vector[(CiteAlignment,Int)] = nas.filter(_._2 != sa._2).map(_._1).zipWithIndex
-		newAlignments.value.clear
-		for (a <- newVec) { newAlignments.value += a }
-	}
-
-
-	/* HERE!!! FIX!!! Look for present passages first. 
-		Don't throw a million errors.
-		Fade saved alignments not visible on screen!
-	*/
-	def loadFromNewAlignments(i:Int):Unit = {
-		if (newAlignments.value.size > 0) {
+	@dom
+	def saveTempAlignment:Unit = {
+		try {
 			unsavedAlignment.value match {
 				case Some(ua) => {
-					//clearUnsavedAlignment(ua)
-				}
-				case None => // do nothing
-			}
-			// clear all anyway
-			val allUrns:Vector[CtsUrn] = {
-				newAlignments.value.toVector.map(_._1.passages).flatten
-			}
-			for (p <- allUrns){
-				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
-				val classList:String = el.getAttribute("class")	
-				val newClass:String = classList.replaceAll("newAlignment[0-9]+","")
-				el.setAttribute("class",newClass)
-			}
+					val newIndex:Int = {
+						if (currentAlignments.value.toVector.size < 1) 0
+						else currentAlignments.value.toVector.last.index + 1
+					}
+					val passageVec:Vector[CtsUrn] = {
+						unsavedAlignmentMap.value.toVector.map(_._1._2.value.toVector.map(_._1)).flatten
+					}
+					val newBoundAlignment:BoundAlignment = BoundAlignment(ua.urn, passageVec, newIndex)
+					// add to list
+					currentAlignments.value += newBoundAlignment
+					// add to all bound-corpora
+					recalculateAlignments
 
-			val als:Vector[(CiteAlignment,Int)] = newAlignments.value.toVector
-			val thisOne:CiteAlignment = als.filter(_._2 == i)(0)._1
-			val passages:Vector[CtsUrn] = thisOne.passages
-			for (p <- passages) {
+					clearUnsavedAlignment(ua)
+				}
+				case None => throw new Exception("Did Alignment.saveTempAlighment with no unsavedAlignment!")
+			}
+		} catch {
+			case e:Exception => {
+				val errorStr:String = s"Failed to save temporary alignment: ${e}."
+				O2Controller.updateUserMessage(errorStr,2)
+			}
+		}
+	}
+
+	def deleteAlignment(dela:BoundAlignment):Unit = {
+		// delete from currentAlignments
+		val thisIndex:Int = dela.index
+		unHighlightMarkedNodes(thisIndex)
+		val tempVec:Vector[BoundAlignment] = currentAlignments.value.toVector.filter( ca => {
+			ca.index != thisIndex
+		})
+
+	 	val renumedVec:Vector[BoundAlignment] = tempVec.zipWithIndex.map( tv => {
+	 		BoundAlignment(tv._1.alignment, tv._1.texts, tv._2)
+	 	})
+		currentAlignments.value.clear
+		for (al <- tempVec) currentAlignments.value += al
+		// recalculate alignments…
+		recalculateAlignments
+	}
+
+	def recalculateAlignments:Unit = {
+		val corps:Vector[O2Model.BoundCorpus] = O2Model.currentCorpus.value.toVector
+		val alignUrns:Vector[CtsUrn] = currentAlignments.value.toVector.map(_.texts).flatten
+		for (c <- O2Model.currentCorpus.value) {
+
+				val nodes:Vector[CtsUrn] = c.versionNodes.value.toVector.map(_.nodes.value.toVector).flatten.map(_.urn)
+				val sharedUrns:Vector[CtsUrn] = nodes.intersect(alignUrns)
+				c.alignments.value = sharedUrns.size
+		}
+	}
+
+	def highlightMarkedNodes(i:Int) = {
+		val currentList:Vector[CtsUrn] = O2Model.currentListOfUrns.value.toVector
+		val urns:Vector[CtsUrn] = currentAlignments.value.toVector.filter(_.index == i).map(_.texts).flatten
+		for (p <- urns) {
+			if (currentList.contains(p)) {
 				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
 				val classList:String = el.getAttribute("class")	
-				val newClass:String = classList + s"newAlignment newAlignment${i}"
+				val newClass:String = s"${classList} tokenForMarker${i % 20}"
 				el.setAttribute("class",newClass)
 			}
 		}
 	}
 
-	def toCEX:String = {
-		if (newAlignments.value.size > 0) {
-			// Assign Urns
-			val boundAs:Vector[(CiteAlignment,Int)] = newAlignments.value.toVector
-			val dlVector:Vector[(CiteAlignment,Int)] = boundAs.map( a => {
-						val d = new js.Date()
-						val urn:Cite2Urn = {
-							val urnBase:String = SaveDialog.newAlignmentCollectionUrn.value.toString
-							val yearMonth:String = s"${d.getFullYear()}${d.getMonth()}"
-							val hours:String = s"${d.getHours()}_${d.getMinutes()}_${d.getSeconds()}_${d.getMilliseconds()}"
-							val index:Int = a._2
-							val urnString:String = s"${urnBase}${yearMonth}${hours}_${index}"
-							Cite2Urn(urnString)
+	def unHighlightMarkedNodes(i:Int) = {
+		val currentList:Vector[CtsUrn] = O2Model.currentListOfUrns.value.toVector
+		val urns:Vector[CtsUrn] = currentAlignments.value.toVector.filter(_.index == i).map(_.texts).flatten
+		for (p <- urns) {
+			if (currentList.contains(p)) {
+				val el = js.Dynamic.global.document.getElementById(s"node_${p}").asInstanceOf[HTMLSpanElement]
+				val classList:String = el.getAttribute("class").replaceAll("tokenForMarker[0-9]+"," ").replaceAll(" +"," ")	
+				el.setAttribute("class",classList)
+			}		
+		}
+	}
+
+	def markAlignmentsInText:Unit = {
+		val alVec:Vector[BoundAlignment] = currentAlignments.value.toVector
+
+	}
+
+// display aligments (from the CEX) as markers on the on-screen text
+	def loadAlignments(vCorp:O2Model.BoundCorpus):Unit = {
+		var timeStart = new js.Date().getTime()
+		val wholeTimeStart = timeStart
+		// Turn on alignment mode (affects navigation)
+		O2Model.clearPassage
+		//Stash URN
+		val u:CtsUrn = vCorp.versionUrn.value
+		val alignmentsForThisCorpus:Vector[Int] = {
+			val alignedNodes:Vector[CtsUrn] = vCorp.versionNodes.value.toVector.map(_.nodes.value.toVector).flatten.map(_.urn)
+			val alignments:Vector[Int] = {
+				currentAlignments.value.toVector.filter( ca => {
+					alignedNodes.intersect(ca.texts).size > 0
+				}).map(_.index)
+			}
+			alignments
+		}
+		val allUrnsForAlignments:Vector[CtsUrn] = {
+			val allAlignments:Vector[BoundAlignment] = {
+				currentAlignments.value.toVector.filter(ca => {
+					alignmentsForThisCorpus.contains(ca.index)
+				})
+			}
+			allAlignments.map( aa => {
+				aa.texts
+			}).flatten.distinct
+		}
+
+
+		val groupedByVersion:Vector[(CtsUrn,Vector[CtsUrn])] = allUrnsForAlignments.groupBy(_.dropPassage).toVector
+
+
+		val rangeUrns:Vector[CtsUrn] = {
+			groupedByVersion.map( gbv => {
+				val urns:Vector[CtsUrn] = gbv._2
+				val version:CtsUrn = gbv._1	
+				val trCorpus:Vector[CtsUrn] = O2Model.textRepo.value.get.corpus.nodes.map(_.urn)
+				val indexedNodes:Vector[(Int, CtsUrn)] = urns.map( u => {
+					val i:Int = trCorpus.indexOf(u)
+					(i, u)
+				})
+
+				val sortedUrns:Vector[CtsUrn] = indexedNodes.sortBy(_._1).map(_._2)
+
+				val depth:Int = sortedUrns.head.citationDepth.head
+				val expandedUrns:Vector[CtsUrn] = {
+					depth match {
+						case 1 => sortedUrns
+						case _ => {
+							sortedUrns.map(_.collapsePassageBy(1)).distinct
 						}
-						val newAlignment:CiteAlignment = CiteAlignment(urn,a._1.label,a._1.passages)
-						(newAlignment, a._2)
-					})
+					}
+				}
+				val fromUrn:CtsUrn = expandedUrns.head
+				val toUrn:CtsUrn = 	expandedUrns.last
+				if ( fromUrn == toUrn ) fromUrn
+				else CtsUrn(s"${fromUrn}-${toUrn.passageComponent}")
+			})
+		}
+
+
+		for (u <- rangeUrns) O2Model.displayPassage(u)
+
+		/* report */
+		var timeEnd = new js.Date().getTime()
+	}
+
+// case class BoundAlignment(alignment:Cite2Urn, texts:Vector[CtsUrn], index:Int)
+def toCEX:String = {
+		if (currentAlignments.value.size > 0) {
+			// Assign Urns
+			val boundAs:Vector[(CiteAlignment,Int)] = currentAlignments.value.toVector.map( ca => {
+				val d = new js.Date()
+				val label:String = s"DucatAlignment ${ca.index}. ${d.getDay()}/${d.getMonth()}/${d.getFullYear()}. By ${SaveDialog.defaultEditorName.value}."
+				val a:CiteAlignment = CiteAlignment(ca.alignment, label, ca.texts.toVector)
+				(a, ca.index)
+			})
+			val dlVector:Vector[(CiteAlignment,Int)] = boundAs.map( a => {
+				val d = new js.Date()
+				val urn:Cite2Urn = {
+					val urnBase:String = SaveDialog.newAlignmentCollectionUrn.value.toString
+					val yearMonth:String = s"${d.getFullYear()}${d.getMonth()}"
+					val hours:String = s"${d.getHours()}_${d.getMinutes()}_${d.getSeconds()}_${d.getMilliseconds()}"
+					val index:Int = a._2
+					val urnString:String = s"${urnBase}${yearMonth}${hours}_${index}"
+					Cite2Urn(urnString)
+				}
+				val newAlignment:CiteAlignment = CiteAlignment(urn,a._1.label,a._1.passages)
+				(newAlignment, a._2)
+			})
 
 			// Collection Def
 			val aCollDef:String = {
@@ -571,7 +562,6 @@ object Alignment {
 		} else {
 			""
 		}
-	}	
-
-
+	}
+	
 }

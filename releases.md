@@ -1,5 +1,17 @@
 # Release notes
 
+**1.0.0**: CSS adjustments for Chrome. In use, so it is "1.0".
+
+**0.9.5**: 6x speedup loading alignments.
+
+**0.9.4**: Changed default for saving. Css.
+
+**0.9.3**: Saving and loading CEX files.
+
+**0.9.2**: UI work done for now. Grouping citable nodes according to penultimate level of citation scheme. Massive speedup on loading alignments. No longer throwing thousands of errors to the JS console.
+
+**0.9.1**: Loading CEX, clicking to make alignments, navigating and seeing alignments, loading other texts based on one corpus' alignments all working.
+
 **0.9.0**: Focusing down on alignment. Removed navigation buttons and functions (users can load texts from URNs). Removed the distinction between "new" and "saved" alignments.
 
 **0.8.5**: Using OHCO2 10.12.2 for better performance on `validReff`. Removed namespaces on top-level JS libraries, to avoid deprecation warnings.

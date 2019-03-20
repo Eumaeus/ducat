@@ -32,7 +32,6 @@ object MainController {
 	*/
 	@JSExport
 	def main(libUrl: String): Unit = {
-
 		// Get a few defaults from cookies, if present
 		val defaultCexFn:Option[String] = MainModel.readCookieValue("defaultCexFn")
 		if (defaultCexFn != None) {
@@ -86,7 +85,6 @@ object MainController {
 		Use AJAX request to get remote CEX file; update repository with CEX data
 	*/
 	def loadRemoteLibrary(url: String):Unit = {
-
 		val xhr = new XMLHttpRequest()
 		xhr.open("GET", url )
 		xhr.onload = { (e: Event) =>
@@ -176,6 +174,7 @@ object MainController {
 		//clearRepositories
 
 
+		MainModel.waiting.value = true
 		try {
 			// Set up repo 
 			val repo:CiteLibrary = CiteLibrary(cexString, MainModel.cexMainDelimiter, MainModel.cexSecondaryDelimiter)
@@ -239,7 +238,8 @@ object MainController {
 			Alignment.alignmentMgr.value = Some(CiteAlignmentManager(repo))	
 			if (Alignment.alignmentMgr.value.get.isValid == false) Alignment.alignmentMgr.value = None
 
-			//checkDefaultTab
+			val task = Task{ Alignment.loadAlignmentsFromCex }
+			val future = task.runAsync
 
 			MainController.updateUserMessage(loadMessage,0)
 
@@ -267,6 +267,7 @@ object MainController {
 				MainController.updateUserMessage(s"""${e}. Invalid CEX file.""",2)
 			}
 		}
+		MainModel.waiting.value = false
 
 	}
 

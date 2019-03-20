@@ -24,9 +24,23 @@ object O2Model {
 
 	var msgTimer:scala.scalajs.js.timers.SetTimeoutHandle = null
 
-	val alignMode = Var(false)
-
-	case class VersionNodeBlock(versionUrn:Var[CtsUrn],nodes:Vars[CitableNode])
+	case class VersionNodeBlock(versionUrn:Var[CtsUrn],nodes:Vars[CitableNode])  {
+		val groupedNodes:Vars[(CtsUrn,Vars[CitableNode])] = {
+			val v1:Vector[CitableNode] = nodes.value.toVector
+			val v2 = v1.zipWithIndex.groupBy( n => n._1.urn.collapsePassageBy(1))
+			val v3 = LinkedHashMap(v2.toSeq sortBy (_._2.head._2): _*)
+			val v4 = v3 mapValues (_ map (_._1))
+			val v5:Vector[(CtsUrn, scala.collection.immutable.Vector[CitableNode])] = v4.toVector
+			val emptyGroupedNodes:Vars[(CtsUrn,Vars[CitableNode])] = Vars.empty[(CtsUrn,Vars[CitableNode])]
+			for ( gn <- v5) {
+				val emptyNodeVars:Vars[CitableNode] = Vars.empty[CitableNode]
+				for (cn <- gn._2) emptyNodeVars.value += cn
+				val newGroup:(CtsUrn,Vars[CitableNode]) = (gn._1, emptyNodeVars)
+				emptyGroupedNodes.value += newGroup
+			}
+			emptyGroupedNodes
+		}
+	}
 
 	case class BoundCorpus(versionUrn:Var[CtsUrn], versionLabel:Var[String], versionNodes:Vars[VersionNodeBlock], currentPrev:Var[Option[CtsUrn]] = Var[Option[CtsUrn]](None), currentNext:Var[Option[CtsUrn]] = Var[Option[CtsUrn]](None), versionsAvailable:Var[Int] = Var(1), alignments:Var[Int] = Var(0)  )
 
@@ -38,25 +52,6 @@ object O2Model {
 
 	// for navigation
 	val urnHistory = Vars.empty[(Int,CtsUrn,String)]
-
-	// Add an entry to the citation-history
-	def updateUrnHistory(u:CtsUrn):Unit = {
-		try {
-			if (textRepo.value != None) {
-
-				val tempList:List[Tuple2[CtsUrn,String]] = urnHistory.value.toList.reverse.map(t => { Tuple2(t._2, t._3)})
-				val newTempList:List[Tuple2[CtsUrn,String]] = tempList ++ List(Tuple2(u,textRepo.value.get.label(u)))
-				val indexedTempList:List[Tuple3[Int,CtsUrn,String]] = newTempList.zipWithIndex.map( t => {
-					Tuple3((t._2 + 1),t._1._1,t._1._2)
-				})
-				val reversedList = indexedTempList.reverse
-				urnHistory.value.clear
-				for (t <- reversedList) { urnHistory.value += t }
-			}
-		} catch{
-			case e:Exception => O2Controller.updateUserMessage(s"Unable to make label for ${u}: ${e}",2)
-		}
-	}
 
 	// urn is what the user requested
 	val urn = Var(CtsUrn("urn:cts:ns:group.work.version.exemplar:passage"))
@@ -87,77 +82,78 @@ object O2Model {
 		}
 	}
 
-	def getPrevNextUrn(urn:CtsUrn):Unit = {
-		O2Model.currentPrev.value = O2Model.textRepo.value.get.corpus.prevUrn(urn)
-		O2Model.currentNext.value = O2Model.textRepo.value.get.corpus.nextUrn(urn)
-	}
-
-	def getPrevNextUrn(urn:CtsUrn, boundCorp:BoundCorpus):Unit = {
-		boundCorp.currentPrev.value = O2Model.textRepo.value.get.corpus.prevUrn(urn)
-		boundCorp.currentNext.value = O2Model.textRepo.value.get.corpus.nextUrn(urn)
-	}
 
 	def collapseToWorkUrn(urn:CtsUrn):CtsUrn = {
 		val s = {
-			urn.passageComponentOption match {
-				case Some(pc) => s"urn:cts:${urn.namespace}:${urn.textGroup}.${urn.work}:${pc}"
-				case None => s"urn:cts:${urn.namespace}:${urn.textGroup}.${urn.work}:"
-			}
+			s"urn:cts:${urn.namespace}:${urn.textGroup}.${urn.work}:${urn.passageComponent}"
 		}
 		val u = CtsUrn(s)
 		u
 	}
 
-	def updateCurrentListOfUrns(c:Corpus):Unit = {
+	def updateCurrentListOfUrns:Unit = {
+		MainModel.waiting.value = true
 		O2Model.currentListOfUrns.value.clear
-		for (n <- c.nodes){
-			O2Model.currentListOfUrns.value += n.urn
+		val clouVec:Vector[BoundCorpus] = currentCorpus.value.toVector
+		val vnbVec:Vector[VersionNodeBlock] = clouVec.map(_.versionNodes.value.toVector).flatten
+		val cnVec:Vector[CitableNode] = vnbVec.map(_.nodes.value.toVector).flatten
+		val urnVec:Vector[CtsUrn] = cnVec.map(_.urn)
+		for (n <- urnVec){
+			O2Model.currentListOfUrns.value += n
 		}	
+		MainModel.waiting.value = false 
 	}
 
 	def removeTextFromCurrentCorpus(vCorp:O2Model.BoundCorpus):Unit = {
+		MainModel.waiting.value = true
 		try {
-			Alignment.clearAll
 			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter(_ != vCorp)
 			}
 			O2Model.currentCorpus.value.clear
 			for ( tc <- tempCorpus){
+				// updating Current Corpus
 				O2Model.currentCorpus.value += tc 
 			}	
+			O2Model.updateCurrentListOfUrns
 
 		} catch {
 			case e:Exception => {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'removeTextFromCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false 
 	}
 
 	def removeTextFromCurrentCorpus(urn:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		try {
-				Alignment.clearAll
-				val tempCorpus:Vector[O2Model.BoundCorpus] = {
+			val tempCorpus:Vector[O2Model.BoundCorpus] = {
 				O2Model.currentCorpus.value.toVector.filter( vc => (urn >= vc.versionUrn.value) == false )
 			}
 			O2Model.currentCorpus.value.clear
+			// updating Current Corpus
 			for ( tc <- tempCorpus){
 				O2Model.currentCorpus.value += tc 
 			}	
-
+			O2Model.updateCurrentListOfUrns
 		} catch {
 			case e:Exception => {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'removeTextFromCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false
 	}
 
 	def updateTextInCurrentCorpus(oldurn:CtsUrn, newurn:CtsUrn):Unit = {
-		Alignment.clearAll
+		MainModel.waiting.value = true
 		removeTextFromCurrentCorpus(oldurn)	
 		displayPassage(newurn)	
+		MainModel.waiting.value = false 
 	}
 
 	def updateCurrentCorpus(c:Corpus, u:CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		try {
 			//O2Model.currentCorpus.value.clear
 			if (O2Model.textRepo.value != None) {
@@ -169,12 +165,7 @@ object O2Model {
 				val tempCorpusVector:Vector[(CtsUrn, Vector[CitableNode])] = c.nodes.groupBy(_.urn.dropPassage).toVector
 				for (tc <- tempCorpusVector) {
 					val versionLabel:String = O2Model.textRepo.value.get.catalog.label(tc._1)		
-					val passageString:String = {
-						u.passageComponentOption match {
-							case Some(s) => s
-							case None => ""
-						}
-					}
+					val passageString:String = u.passageComponent
 					val boundVersionLabel = Var(versionLabel)
 
 					val versionUrn:CtsUrn = CtsUrn(s"${tc._1}${passageString}")
@@ -206,22 +197,17 @@ object O2Model {
 						for (n <- b._2) tempNodesVec.value += n
 						tempNodeBlockVec.value += VersionNodeBlock(tempBlockUrn, tempNodesVec)
 					}
+
 					val newBoundCorpus:BoundCorpus = BoundCorpus(boundVersionUrn, boundVersionLabel, tempNodeBlockVec) 
 
-
-				//	O2Model.currentCorpus.value += newBoundCorpus
-
-					/* Sort corpora */
-					val sortingCorpus:Vector[BoundCorpus] = O2Model.currentCorpus.value.toVector ++ Vector(newBoundCorpus)
-					val sortedCorpora:Vector[BoundCorpus] = sortingCorpus.sortBy(_.versionUrn.value.toString)
+					val sortingCorpus:Vector[BoundCorpus] = sortCorpora(O2Model.currentCorpus.value.toVector ++ Vector(newBoundCorpus))
+					val sortedCorpora:Vector[BoundCorpus] = sortCorpora(sortingCorpus) 
 					O2Model.currentCorpus.value.clear
+					// updating Current Corpus
 					for ( tc <- sortedCorpora){
 						O2Model.currentCorpus.value += tc 
 					}
-					/*
-					val task = Task{ O2Model.getPrevNextUrn(newBoundCorpus.versionUrn.value, newBoundCorpus) }
-					val future = task.runAsync
-					*/
+					O2Model.updateCurrentListOfUrns
 					val task2 = Task { newBoundCorpus.versionsAvailable.value = O2Model.versionsForUrn(newBoundCorpus.versionUrn.value) }
 					val future2 = task2.runAsync
 					val task3 = Task{ Alignment.alignmentsForCorpus(newBoundCorpus)}
@@ -235,6 +221,7 @@ object O2Model {
 				O2Controller.updateUserMessage(s"O2Model Exception in 'updateCurrentCorpus': ${e}",2)
 			}
 		}
+		MainModel.waiting.value = false
 	}
 
 	def dropOneLevel(u:CtsUrn):CtsUrn = { 
@@ -254,8 +241,9 @@ object O2Model {
 
 
 	def displayNewPassage(urn:CtsUrn):Unit = {
-		Alignment.clearAll
+		MainModel.waiting.value = true
 		O2Model.displayPassage(urn)
+		MainModel.waiting.value = false
 	}
 
 	@dom
@@ -264,19 +252,17 @@ object O2Model {
 		//O2Model.versionsForCurrentUrn.value = 0
 		O2Model.currentListOfUrns.value.clear
 		O2Model.currentCorpus.value.clear
-		O2Model.alignMode.value = false
-		Alignment.clearAll
 	}
 
 	def passageLevel(u:CtsUrn):Int = {
 		try {
 			val urn = u.dropSubref
 			if (urn.isRange) throw new Exception(s"Cannot report passage level for ${urn} becfause it is a range.")
-			urn.passageComponentOption match {
-				case Some(p) => {
-					p.split('.').size
+			urn.passageComponent.size match {
+				case n if (n > 0) => {
+					urn.passageComponent.split('.').size
 				}
-				case None => throw new Exception(s"Cannot report passage level for ${u} because it does not have a passage component.")
+				case _ => throw new Exception(s"Cannot report passage level for ${u} because it does not have a passage component.")
 			}
 		} catch {
 			case e:Exception => throw new Exception(s"${e}")	
@@ -288,11 +274,11 @@ object O2Model {
 			val urn = u.dropSubref
 			val pl:Int = passageLevel(urn)
 			if (pl < level) throw new Exception(s"${u} has a ${pl}-deep citation level, which is less than ${level}.")
-			urn.passageComponentOption match {
-				case Some(p) => {
-					p.split('.')(level-1)
+			urn.passageComponent.size match {
+				case n if (n > 0) => {
+					urn.passageComponent.split('.')(level-1)
 				}
-				case None => throw new Exception(s"Cannot report passage level for ${u} because it does not have a passage component.")
+				case _ => throw new Exception(s"Cannot report passage level for ${u} because it does not have a passage component.")
 			}
 		} catch {
 			case e:Exception => throw new Exception(s"${e}")	
@@ -301,10 +287,13 @@ object O2Model {
 
 	@dom
 	def displayPassage(newUrn: CtsUrn):Unit = {
+		MainModel.waiting.value = true
 		val tempCorpus: Corpus = O2Model.textRepo.value.get.corpus >= newUrn
-		O2Model.updateCurrentListOfUrns(tempCorpus)
+	//	O2Model.updateCurrentListOfUrns(tempCorpus)
 		O2Model.updateCurrentCorpus(tempCorpus, newUrn)
 		O2Model.currentNumberOfCitableNodes.value = tempCorpus.size
+		Alignment.recalculateAlignments
+		MainModel.waiting.value = false
 	}
 
 
@@ -344,5 +333,52 @@ object O2Model {
 		url + urnString
 	}
 
+	/*	Engage in a little trickery when updating the current corpus. 
+	*	If we have two texts, and one is Greek/Latin, it should go first.
+	*	If we have three, and one is Greek, put it in the middle
+	*/
+	def sortCorpora(tempCorpus:Vector[BoundCorpus]):Vector[BoundCorpus] = {
+		textRepo.value match {	
+			case Some(tr) => {	
+					val langTuples:Vector[(String, BoundCorpus)] = {
+						tempCorpus.sortBy(_.versionUrn.value.toString).map( c => {
+								val u:CtsUrn = c.versionUrn.value
+								val textVec:Vector[CatalogEntry] = tr.catalog.entriesForUrn(u)
+								val langStr:String = {
+									if (textVec.size > 0) {
+										textVec.head.lang
+									} else {
+										"zzz"
+									}
+								}
+								(langStr, c)
+						}).sortBy(_._1)	
+					}
+					langTuples.size match {
+						case n if (n == 1) => tempCorpus
+						case n if (n == 2) => {
+							val allGreek = langTuples.filter( t => ((t._1 == "grc") | (t._1 == "lat")))
+							val notGreek = langTuples.filter( t => ((t._1 != "grc") & (t._1 != "lat")))
+							(allGreek ++ notGreek).map(_._2)
+						}
+						case n if (n == 3) => {
+							val allGreek = langTuples.filter( t => ((t._1 == "grc") | (t._1 == "lat")))
+							val notGreek = langTuples.filter( t => ((t._1 != "grc") & (t._1 != "lat")))
+							notGreek.size match {
+								case n if (n == 0) => tempCorpus.sortBy(_.versionUrn.value.toString)
+								case n if (n == 1) => {
+									(Vector(notGreek.head) ++ allGreek).map(_._2)
+								}
+								case _ => {
+									(Vector(notGreek.head) ++ allGreek ++ notGreek.tail).map(_._2)
+								}
+							}
+						}
+						case _ => tempCorpus.sortBy(_.versionUrn.value.toString)
+					}
+			}
+			case None => tempCorpus.sortBy(_.versionUrn.value.toString)
+		}
+	}
 
 }

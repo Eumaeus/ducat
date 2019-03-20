@@ -1,5 +1,9 @@
-/* Save Dialog */
 
+.waiting {
+	cursor: wait;
+}
+
+/* Save Dialog */
 div#save_dialog{
   position: fixed;
   top: 50%;
@@ -230,10 +234,11 @@ span.savedAlignment:active {
 }
 
 .newAlignment {
-	padding: 2px;
-	border: solid 0px #EEEEEE;
-	border-radius: 4px;
-	cursor: pointer;
+	padding: 3px 3px 5px 3px;
+    border: solid 0px #EEEEEE;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 3px;
 }
 
 span.savedAlignment0, span.tokenForMarker0 {
@@ -647,8 +652,8 @@ a:hover {
 }
 
 .o2_message {
-	top: 30px;
-	right: 5px;
+top: 33px;
+right: 65px;
 }
 
 
@@ -785,6 +790,26 @@ select#ngram_nGramScopeOption {
 p.o2_textPassage {
 	margin: 0.5em;
 	padding: 0;
+}
+
+
+.o2_nodeGroup {
+	margin-left: 3em;
+}
+
+.o2_nodeGroup p.o2_textPassage {
+	margin-left: 0;
+}
+
+.o2_nodeGroup:first-line {
+	color: maroon;
+}
+
+.o2_nodeGroupCitation {
+margin-left: -4em;
+font-size: 80%;
+color: maroon;
+margin-right: 0.5em;
 }
 
 div.o2_citationBlock {

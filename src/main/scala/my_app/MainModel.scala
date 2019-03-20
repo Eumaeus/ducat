@@ -25,6 +25,7 @@ object MainModel {
 		val userAlert = Var("default")
 		val userMessageVisibility = Var("app_hidden")
 		var msgTimer:scala.scalajs.js.timers.SetTimeoutHandle = null
+		var waiting:Var[Boolean] = Var(false)
 
 		val welcomeMessage = Var("")
 		val requestParameterUrn = Var[Option[Vector[CtsUrn]]](None)

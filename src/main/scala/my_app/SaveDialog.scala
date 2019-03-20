@@ -106,7 +106,7 @@ object SaveDialog {
 				disabled = { false }
 				onclick = { event: Event => {
 					updateCexSettings
-					CexWriter.downloadCex
+					ReaderCexWriter.downloadCex
 					MainModel.saveDialogVisibility.value = "app_hidden"
 				}}
 			>Download</button>
@@ -126,9 +126,9 @@ object SaveDialog {
 		<div id="corpusOptionsBlock" class="saveDialogGroup">
 			<label for="">Corpus Options:</label>
 			<select id="corpusOptions">
+				<option value="all">All passages of all texts</option>
 				<option value="shown">Displayed passages only</option>
 				<option value="shownAll">All passages for displayed texts</option>
-				<option value="all">All passages of all texts</option>
 			</select>
 		</div>
 	}
@@ -138,7 +138,7 @@ object SaveDialog {
 		<div id="alignmentOptionsBlock" class="saveDialogGroup">
 			<label for="">Alignment Options:</label>
 			<select id="alignmentOptions">
-				<option value="shown">New alignments only</option>
+				<option value="shown">Alignments only</option>
 				<!--  <option value="all">All Objects &amp; Relations</option> -->
 			</select>
 		</div>
@@ -171,7 +171,7 @@ object SaveDialog {
 	}
 
 	def doDownload = {
-		CexWriter.downloadCex
+		ReaderCexWriter.downloadCex
 	}
 
 	def validateCite2UrnEntry(thisEvent: Event):Unit = {

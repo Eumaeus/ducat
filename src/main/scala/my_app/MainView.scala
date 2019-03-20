@@ -39,7 +39,7 @@ object MainView {
 
 	@dom
 	def mainDiv = {
-		<div id="main-wrapper">
+		<div id="main-wrapper" class={ if (MainModel.waiting.bind) "waiting" else " "}>
 		<header>
 			<a href="https://www.dictionary.com/browse/ducat" target="_blank">Ducat</a> 
 			<span id="app_header_versionInfo">“Daughter-of-<a href="">Ugarit</a> Citation Alignment Tool.” Version { BuildInfo.version }</span>
