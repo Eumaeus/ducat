@@ -783,8 +783,9 @@ select#ngram_nGramScopeOption {
 	font-size: 80%;
 	color: #888;
 	line-height: 1.1em;
-	padding-bottom: 5px;
+	/* padding-bottom: 5px; */
 	padding-top: 5px;
+	height: 2em;
 }
 
 p.o2_textPassage {
