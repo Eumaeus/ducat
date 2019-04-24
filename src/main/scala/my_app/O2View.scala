@@ -294,7 +294,12 @@ def textVersionContainer(vCorp:O2Model.BoundCorpus) = {
 @dom
 def versionNodes(vCorp:O2Model.BoundCorpus) = {
 	for (vn <- vCorp.versionNodes) yield {
-		<div class="o2_citationBlock">	
+		<div class={
+			O2Model.checkForRTL(vn.nodes.value.head.text) match {
+				case true => s"o2_citationBlock rtl"
+				case false => s"o2_citationBlock ltr"
+			}
+		}>	
 			{
 				for ( gn <- vn.groupedNodes) yield {
 					<div class="o2_nodeGroup"> 

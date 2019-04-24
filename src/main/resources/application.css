@@ -783,7 +783,7 @@ select#ngram_nGramScopeOption {
 	font-size: 80%;
 	color: #888;
 	line-height: 1.1em;
-	/* padding-bottom: 5px; */
+	padding-bottom: 8px;
 	padding-top: 5px;
 	height: 2em;
 }
@@ -807,10 +807,17 @@ p.o2_textPassage {
 }
 
 .o2_nodeGroupCitation {
-margin-left: -4em;
 font-size: 80%;
 color: maroon;
+}
+
+.ltr .o2_nodeGroupCitation {
+margin-right: -4em;
 margin-right: 0.5em;
+}
+
+.rtl .o2_nodeGroupCitation {
+margin-left: 0.5em;
 }
 
 div.o2_citationBlock {

@@ -1,5 +1,7 @@
 # Release notes
 
+**1.1.0**: Correct display of right-to-left languages.
+
 **1.0.0**: CSS adjustments for Chrome. In use, so it is "1.0".
 
 **0.9.5**: 6x speedup loading alignments.

@@ -2,7 +2,7 @@ enablePlugins(ScalaJSPlugin, BuildInfoPlugin)
 
 name := "reader"
 
-version := "1.0.0"
+version := "1.1.0"
 
 scalaVersion := "2.12.8"
 
