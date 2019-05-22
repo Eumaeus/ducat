@@ -73,8 +73,8 @@ def assembleCex:String = {
     getCtsData(O2Model.textRepo.value, SaveDialog.downloadCorpusOption.value),
     DataModelModel.toCEX(DataModelModel.dataModels.value, SaveDialog.newAlignmentCollectionUrn.value),
     ObjectModel.toCEX(ObjectModel.collRep.value),
-    RelationsModel.toCEX,
-    Alignment.toCEX
+    if (SaveDialog.downloadAlignmentOption.value == "shown") RelationsModel.toCEX else "\n",
+    if (SaveDialog.downloadAlignmentOption.value == "shown") Alignment.toCEX else "\n"
   ).mkString("\n\n")
   cexString
 }
@@ -145,7 +145,7 @@ def getCtsDataAll(tr:TextRepository):String = {
    val ctsData:Vector[String] = tr.catalog.texts.map(t => {
         val intro:String = s"""\n//${t}"""
         val header:String = "#!ctsdata"
-        val nodes:Vector[String] = (tr.corpus ~~ t.urn).nodes.map(n => {
+        val nodes:Vector[String] = (tr.corpus ~= t.urn).nodes.map(n => {
           s"${n.urn}#${n.text}"
         })
         Vector(intro,header) ++ nodes

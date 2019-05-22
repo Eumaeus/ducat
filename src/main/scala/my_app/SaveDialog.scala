@@ -43,7 +43,7 @@ object SaveDialog {
 			if (validOpts.contains(usr)) usr else downloadCorpusOption.value
 		}
 		val userAlignmentOptions:String = {
-			val validOpts:Vector[String] = Vector("shown","all")
+			val validOpts:Vector[String] = Vector("shown","blank")
 			val thisTarget = document.getElementById("alignmentOptions").asInstanceOf[org.scalajs.dom.raw.HTMLSelectElement]
 			val usr:String = thisTarget.value.toString
 			if (validOpts.contains(usr)) usr else downloadAlignmentOption.value
@@ -139,7 +139,7 @@ object SaveDialog {
 			<label for="">Alignment Options:</label>
 			<select id="alignmentOptions">
 				<option value="shown">Alignments only</option>
-				<!--  <option value="all">All Objects &amp; Relations</option> -->
+				<option value="blank">No alignments (blank template)</option>
 			</select>
 		</div>
 	}
