@@ -1,5 +1,7 @@
 # Release notes
 
+**1.3.9**: Using OHCO2 library v. 10.14.0, and XCite library v. 4.1.1.
+
 **1.2.0**: Using OHCO2 library v. 10.13.0. Added option for downloading blank template file. Corrected bug when a library includes versions and exemplars of the same text (fixed with OHCO2 10.13.0).
 
 **1.1.0**: Correct display of right-to-left languages.

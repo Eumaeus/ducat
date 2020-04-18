@@ -2,7 +2,7 @@ enablePlugins(ScalaJSPlugin, BuildInfoPlugin)
 
 name := "reader"
 
-version := "1.2.0"
+version := "1.3.0"
 
 scalaVersion := "2.12.8"
 
@@ -15,8 +15,8 @@ libraryDependencies ++= Seq(
   "org.scala-js" %% "scalajs-stubs" % scalaJSVersion % "provided",
   "org.scala-js" %%% "scalajs-dom" % "0.9.6",
   "io.monix" %%% "monix" % "2.3.0",
-  "edu.holycross.shot.cite" %%% "xcite" % "4.0.2",
-  "edu.holycross.shot" %%% "ohco2" % "10.13.0",
+  "edu.holycross.shot.cite" %%% "xcite" % "4.1.1",
+  "edu.holycross.shot" %%% "ohco2" % "10.14.0",
   "edu.holycross.shot" %%% "scm" % "6.2.0",
   "edu.holycross.shot" %%% "citeobj" % "7.3.2",
   "edu.holycross.shot" %%% "citerelations" % "2.4.0",
@@ -41,7 +41,8 @@ import java.io.PrintWriter
 spa := {
 
 //  val defaultLibraryUrl = "https://raw.githubusercontent.com/cite-architecture/citedx/master/libraries/millionplus.cex"
-  val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/Greek120/Luke2.1-2.14_blank.cex"
+//  val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/Greek120/Luke2.1-2.14_blank.cex"
+  val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/catullus_1_alignment.cex"
   //val defaultLibraryUrl = "https://raw.githubusercontent.com/Eumaeus/fuCiteDX/master/fu-spring2018.cex"
   val serverMode = false 
   val defaultLibraryDelimiter = "#"
